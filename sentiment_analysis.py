@@ -22,69 +22,41 @@ datasets = {
 
 # import financial-news dataset from transformers
 from datasets import load_dataset
-
-dataset = load_dataset("ashraq/financial-news")
-
-# import Finance-Bert
-from transformers import BertTokenizer, BertForSequenceClassification
 from transformers import pipeline
 
-model = BertForSequenceClassification.from_pretrained("ahmedrachid/FinancialBERT-Sentiment-Analysis",num_labels=3)
-tokenizer = BertTokenizer.from_pretrained("ahmedrachid/FinancialBERT-Sentiment-Analysis")
+try:
+    label_generator = pipeline("text-classification", model = models['twitter']['finance_tweets'][0], device=0)
+except:
+    label_generator = pipeline("text-classification", model = models['twitter']['finance_tweets'][0])
 
-nlp = pipeline("sentiment-analysis", model=model, tokenizer=tokenizer)
+dataset = load_dataset(datasets['twitter']['finance_tweets'][1])
 
+def test_speed(label_generator, dataset, column_name = 'tweet_text', num_obs = 100):
+    import time
+    import random
+    sample_idx = random.sample(range(len(dataset["train"][column_name])), num_obs)
+    sentences = [dataset["train"][column_name][i] for i in sample_idx]
+    sentences = [sentence for sentence in sentences if sentence is not None]
+    start = time.time()
+    labels = label_generator(sentences)
+    end = time.time()
+    len_document = len(dataset["train"][column_name])
+    print(f"Time taken: {end-start} seconds")
+    print(f"Estimated time for document: {len_document/num_obs*(end-start)/60:.2f} min")
 
-# Use a pipeline as a high-level helper
-# from transformers import pipeline
+def get_labels(label_generator, dataset, column_name = 'tweet_text'):
+    # remove na and keep track of indices
+    sentences = [(i, sentence) for i, sentence in enumerate(dataset["train"][column_name]) if sentence is not None]
 
-pipe = pipeline("text-classification", model="mrm8488/distilroberta-finetuned-financial-news-sentiment-analysis")
+    # Generate labels
+    labels = label_generator([sentence for i, sentence in sentences])
 
+    # Map indices to labels
+    index_label_map = {sentences[i][0]: label for i, label in enumerate(labels)}
 
-# sample 50 observations from dataset
-import random
-random.seed(42)
-sample = random.sample(range(len(dataset["train"])), 50)
-sentences = [dataset["train"]['headline'][i] for i in sample]
-results = nlp(sentences)
-print(results)
+    return index_label_map
 
-
-import torch
-from datasets import load_dataset
-from transformers import BertTokenizer, BertForSequenceClassification, pipeline
-
-# Check if CUDA is available and set the device accordingly
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(device)
-
-# Load the dataset
-dataset = load_dataset("ashraq/financial-news")
-
-# Load the model and tokenizer
-model = BertForSequenceClassification.from_pretrained("ahmedrachid/FinancialBERT-Sentiment-Analysis", num_labels=3).to(device)
-tokenizer = BertTokenizer.from_pretrained("ahmedrachid/FinancialBERT-Sentiment-Analysis")
-
-# Create the sentiment analysis pipeline
-if device == "cuda":
-    nlp = pipeline("sentiment-analysis", model=model, tokenizer=tokenizer, device=0)  # device=0 refers to the GPU
-else:
-    nlp = pipeline("sentiment-analysis", model=model, tokenizer=tokenizer)
-
-# Sample 50 observations from the dataset
-import random
-random.seed(42)
-sample = random.sample(range(len(dataset["train"])), 50)
-sentences = [dataset["train"]['headline'][i] for i in sample]
-
-# Generate labels for the dataset
-results = nlp(sentences)
-
-# Print the results
-print(results)
-
-############################################################################################################
-# to generate labels for the entire dataset
-############################################################################################################
-
-labels = nlp(dataset["train"]['headline'])
+def store_labels(index_label_map, dataset_name):
+    import pickle
+    with open(f"data/{dataset_name}_labels.pkl", "wb") as f:
+        pickle.dump(index_label_map, f)

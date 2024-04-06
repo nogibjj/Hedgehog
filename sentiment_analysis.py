@@ -2,7 +2,8 @@
 models = {
     "twitter": {
         "regular": ["cardiffnlp/twitter-roberta-base-sentiment"], 
-        "finance_tweets": ["nickmuchi/finbert-tone-finetuned-fintwitter-classification"],
+        "finance_tweets": ["nickmuchi/finbert-tone-finetuned-fintwitter-classification",
+                           "StephanAkkerman/FinTwitBERT"],
     "financial_news": ["mrm8488/distilroberta-finetuned-financial-news-sentiment-analysis", "ahmedrachid/FinancialBERT-Sentiment-Analysis"],
     }
 }
@@ -10,15 +11,16 @@ models = {
 # datasets
 datasets = {
     "twitter": {
-        "finance_tweets": ["StephanAkkerman/financial-tweets-crypto",
-                           "StephanAkkerman/financial-tweets-stocks",
-                           "StephanAkkerman/financial-tweets-other",
+        "finance_tweets": ["StephanAkkerman/financial-tweets",
+                           "StephanAkkerman/stock-market-tweets-data",
                            "mjw/stock_market_tweets",
-                           "zeroshot/twitter-financial-news-sentiment"],
+                           "zeroshot/twitter-financial-news-sentiment",
+                           "emad12/stock_tweets_sentiment"],
         },
     "financial_news": "ashraq/financial-news",
 }
 
+kaggle_crypto_dir = "kaggle datasets download -d rezasemyari/crypto-sentiment-tweets"
 
 # import financial-news dataset from transformers
 from datasets import load_dataset

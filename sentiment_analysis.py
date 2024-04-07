@@ -27,11 +27,11 @@ from datasets import load_dataset
 from transformers import pipeline
 
 try:
-    label_generator = pipeline("text-classification", model = models['twitter']['finance_tweets'][0], device=0)
+    label_generator = pipeline("text-classification", model = models['twitter']['finance_tweets'][1], device=0)
 except:
-    label_generator = pipeline("text-classification", model = models['twitter']['finance_tweets'][0])
+    label_generator = pipeline("text-classification", model = models['twitter']['finance_tweets'][1])
 
-dataset = load_dataset(datasets['twitter']['finance_tweets'][1])
+dataset = load_dataset(datasets['twitter']['finance_tweets'][2])
 
 def test_speed(label_generator, dataset, column_name = 'tweet_text', num_obs = 100):
     import time
@@ -62,3 +62,8 @@ def store_labels(index_label_map, dataset_name):
     import pickle
     with open(f"data/{dataset_name}_labels.pkl", "wb") as f:
         pickle.dump(index_label_map, f)
+
+if __name__ == "__main__":
+    index_label_map = get_labels(label_generator, dataset, 'body')
+    store_labels(index_label_map, 'stock_market_tweets')
+    print("Done!")

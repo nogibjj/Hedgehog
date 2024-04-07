@@ -31,7 +31,7 @@ try:
 except:
     label_generator = pipeline("text-classification", model = models['twitter']['finance_tweets'][1])
 
-dataset = load_dataset(datasets['twitter']['finance_tweets'][2])
+dataset = load_dataset(datasets['twitter']['finance_tweets'][4])
 
 def test_speed(label_generator, dataset, column_name = 'tweet_text', num_obs = 100):
     import time

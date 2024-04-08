@@ -1,6 +1,7 @@
 from datasets import load_dataset
 from transformers import pipeline
 
+
 # models
 models = {
     "twitter": {
@@ -34,30 +35,45 @@ def create_pipeline(model_name, device = 0):
 
 # dataset = load_dataset(datasets['twitter']['finance_tweets'][4])
 
-def test_speed(label_generator, dataset, column_name = 'tweet_text', num_obs = 100):
+def test_speed(pipeline, dataset, column_name = 'tweet_text', num_obs = 100):
     import time
     import random
     sample_idx = random.sample(range(len(dataset["train"][column_name])), num_obs)
     sentences = [dataset["train"][column_name][i] for i in sample_idx]
     sentences = [sentence for sentence in sentences if sentence is not None]
     start = time.time()
-    labels = label_generator(sentences)
+    _ = pipeline(sentences)
     end = time.time()
     len_document = len(dataset["train"][column_name])
     print(f"Time taken: {end-start} seconds")
     print(f"Estimated time for document: {len_document/num_obs*(end-start)/60:.2f} min")
 
-def get_labels(label_generator, dataset, column_name = 'tweet_text'):
+def get_labels(pipeline, dataset, column_name = 'tweet_text'):
     # remove na and keep track of indices
     sentences = [(i, sentence) for i, sentence in enumerate(dataset["train"][column_name]) if sentence is not None]
 
     # Generate labels
-    labels = label_generator([sentence for i, sentence in sentences])
+    labels = pipeline([sentence for i, sentence in sentences], truncation=True, max_length=512)
 
     # Map indices to labels
     index_label_map = {sentences[i][0]: label for i, label in enumerate(labels)}
 
     return index_label_map
+
+# def get_labels(label_generator, dataset, column_name = 'tweet_text'):
+#     # remove na and keep track of indices
+#     sentences = [(i, sentence) for i, sentence in enumerate(dataset["train"][column_name]) if sentence is not None]
+
+#     # Truncate sentences
+#     sentences = [(i, label_generator.tokenizer(sentence, truncation='longest_first', max_length=512)['input_ids']) for i, sentence in sentences]
+
+#     # Generate labels
+#     labels = label_generator([sentence for i, sentence in sentences])
+
+#     # Map indices to labels
+#     index_label_map = {sentences[i][0]: label for i, label in enumerate(labels)}
+
+#     return index_label_map
 
 def store_labels(index_label_map, dataset_name):
     import pickle

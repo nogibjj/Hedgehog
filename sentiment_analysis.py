@@ -98,3 +98,20 @@ def labels_dates_df(index_label_map, dataset, date_column):
     scores = [index_label_map[key]['score'] for key in index_label_map]
     
     return pd.DataFrame({"date": dates.squeeze(), "label": labels, "score": scores})  # Use squeeze to convert DataFrame back to Series
+
+
+def clean_dates_df(df):
+    df['date'] = df['date'].apply(lambda x: x.strip(' Hora Padrão do Pacífico (EUA)').strip())
+    df['date'] = df['date'].apply(lambda x:x[:10])
+    # df['date'] = pd.to_datetime(df['date'].str.strip(), format = 'mixed', errors = 'coerce')
+    df['date'] = pd.to_datetime(df['date'].str.strip(), errors = 'coerce')
+    df.dropna(inplace = True)
+
+def clean_labels(df, positive = "BULLISH", negative = "BEARISH"):
+    label_map = {
+        f"{positive}": 1,
+        f"{negative}": -1,
+    }
+    df['label'] = df['label'].map(label_map).fillna(0).astype(int)
+
+

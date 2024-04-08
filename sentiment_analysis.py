@@ -1,9 +1,13 @@
+from datasets import load_dataset
+from transformers import pipeline
+
 # models
 models = {
     "twitter": {
         "regular": ["cardiffnlp/twitter-roberta-base-sentiment"], 
         "finance_tweets": ["nickmuchi/finbert-tone-finetuned-fintwitter-classification",
-                           "StephanAkkerman/FinTwitBERT"],
+                           "StephanAkkerman/FinTwitBERT",
+                           "StephanAkkerman/FinTwitBERT-sentiment"],
     "financial_news": ["mrm8488/distilroberta-finetuned-financial-news-sentiment-analysis", "ahmedrachid/FinancialBERT-Sentiment-Analysis"],
     }
 }
@@ -22,16 +26,13 @@ datasets = {
 
 kaggle_crypto_dir = "kaggle datasets download -d rezasemyari/crypto-sentiment-tweets"
 
-# import financial-news dataset from transformers
-from datasets import load_dataset
-from transformers import pipeline
+def create_pipeline(model_name, device = 0):
+    try:
+        return pipeline("sentiment-analysis", model = model_name, device=device)
+    except:
+        return pipeline("sentiment-analysis", model = model_name)
 
-try:
-    label_generator = pipeline("text-classification", model = models['twitter']['finance_tweets'][1], device=0)
-except:
-    label_generator = pipeline("text-classification", model = models['twitter']['finance_tweets'][1])
-
-dataset = load_dataset(datasets['twitter']['finance_tweets'][4])
+# dataset = load_dataset(datasets['twitter']['finance_tweets'][4])
 
 def test_speed(label_generator, dataset, column_name = 'tweet_text', num_obs = 100):
     import time
@@ -63,7 +64,21 @@ def store_labels(index_label_map, dataset_name):
     with open(f"data/{dataset_name}_labels.pkl", "wb") as f:
         pickle.dump(index_label_map, f)
 
-if __name__ == "__main__":
-    index_label_map = get_labels(label_generator, dataset, 'body')
-    store_labels(index_label_map, 'stock_market_tweets')
-    print("Done!")
+def load_labels(dataset_name):
+    import pickle
+    with open(f"data/{dataset_name}_labels.pkl", "rb") as f:
+        return pickle.load(f)
+    
+
+import pandas as pd
+import dask.dataframe as dd
+
+def labels_dates_df(index_label_map, dataset, date_column):
+    dates_series = pd.Series(dataset["train"][date_column])
+    dates_df = dates_series.to_frame()  # Convert Series to DataFrame
+    dates = dd.from_pandas(dates_df, npartitions=1800).loc[list(index_label_map.keys())].compute()
+    
+    labels = [index_label_map[key]['label'] for key in index_label_map]
+    scores = [index_label_map[key]['score'] for key in index_label_map]
+    
+    return pd.DataFrame({"date": dates.squeeze(), "label": labels, "score": scores})  # Use squeeze to convert DataFrame back to Series

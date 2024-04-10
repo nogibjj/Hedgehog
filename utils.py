@@ -23,3 +23,18 @@ def long_feature_df(df):
 
     return df_pivot
 
+def fill_short_interest_ratio(df):
+    ''' Fill missing short interest ratio values with forward fill'''
+    # find columns with short interest ratio
+    selected_columns = list(filter(lambda x: "SHORT INTEREST RATIO" in x, df.columns))
+
+    # Forward fill missing values
+    df.loc[:, selected_columns] = df.loc[:, selected_columns].ffill()
+
+    return df
+
+def drop_ticker(df, ticker):
+    ''' Drop a ticker from the dataframe'''
+    selected_columns = list(filter(lambda x: ticker not in x, df.columns))
+    return df[selected_columns]
+

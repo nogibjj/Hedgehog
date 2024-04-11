@@ -136,5 +136,29 @@ def add_technical_indicators(df):
     return df
 
 
+############################################################################################################
+# x, y prep and train test split
+############################################################################################################
+from sklearn.model_selection import train_test_split
+
+def ml_prep(flattened_df, days=13):
+    assert days in [1, 5, 8, 13, 21], "days must be 1, 5, 8, 13, or 21"
+    # flattened_df.dropna(inplace=True)
+    # define target variable and create y_true
+    flattened_df["y_true"] = flattened_df["SPY_ewm_log_ret_1d"].rolling(window = days).sum().shift(-days)
+    flattened_df.dropna(inplace=True)
+    # define features
+    y_true = flattened_df["y_true"]
+    X = flattened_df.drop(columns=["DATE", "y_true"])
+    X = X.reset_index()
+    assert len(X) == len(y_true), "X and y_true must have the same length"
+
+    # train test split
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y_true, test_size=0.2, random_state=257
+    )
+
+    return X_train, X_test, y_train, y_test
+
 
 

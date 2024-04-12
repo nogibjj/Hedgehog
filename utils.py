@@ -141,24 +141,151 @@ def add_technical_indicators(df):
 ############################################################################################################
 from sklearn.model_selection import train_test_split
 
-def ml_prep(flattened_df, days=13):
+def ml_prep(flattened_df, days=13, random_state=257):
+    ''' Prepare data for regression'''
     assert days in [1, 5, 8, 13, 21], "days must be 1, 5, 8, 13, or 21"
     # flattened_df.dropna(inplace=True)
     # define target variable and create y_true
     flattened_df["y_true"] = flattened_df["SPY_ewm_log_ret_1d"].rolling(window = days).sum().shift(-days)
-    flattened_df.dropna(inplace=True)
+    flattened_df = flattened_df.dropna()
     # define features
-    y_true = flattened_df["y_true"]
-    X = flattened_df.drop(columns=["DATE", "y_true"])
-    X = X.reset_index()
+    y_true = flattened_df["y_true"].values
+    X = flattened_df.drop(columns=["DATE", "y_true"]).values
+    # X = X.reset_index(drop = True)
     assert len(X) == len(y_true), "X and y_true must have the same length"
 
     # train test split
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y_true, test_size=0.2, random_state=257
+        X, y_true, test_size=0.2, random_state=random_state, shuffle=True
     )
 
     return X_train, X_test, y_train, y_test
 
+def prep_classifier_data(df, days = 13, random_state=257):
+    ''' Prepare data for classifier'''
+    # Create target variable
+    df["y_true"] = df["SPY_ewm_log_ret_1d"].rolling(window = days).sum().shift(-days)
+    df["y_true"] = df["y_true"].apply(lambda x: 1 if x > 0 else 0)
+    df = df.dropna()
+    # Define features
+    y_true = df["y_true"].values
+    X = df.drop(columns=["DATE", "y_true"]).values
+    assert len(X) == len(y_true), "X and y_true must have the same length"
+    # train test split
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y_true, test_size=0.2, random_state=random_state, shuffle=True
+    )
+
+    return X_train, X_test, y_train, y_test
+
+############################################################################################################
+# models
+############################################################################################################
+from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+
+from sklearn.metrics import accuracy_score, confusion_matrix
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+def logistic_regression(X_train, X_test, y_train, y_test, random_state=257):
+    ''' Logistic Regression'''
+    # train model
+    clf = LogisticRegression(random_state=random_state)
+    clf.fit(X_train, y_train)
+
+    # predict on test data
+    y_pred = clf.predict(X_test)
+
+    # evaluate model
+    print("Accuracy: ", accuracy_score(y_test, y_pred))
+    # Generate the confusion matrix
+    cm = confusion_matrix(y_test, y_pred)
+
+    # Plot the confusion matrix
+    plt.figure(figsize=(10, 7))
+    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues")
+    plt.xlabel("Predicted")
+    plt.ylabel("Truth")
+    plt.show()
+
+    return clf
+
+def random_forest_classifier(X_train, X_test, y_train, y_test, n_estimators=1000, max_depth=50, random_state=257):
+    """Random Forest Classifier"""
+
+    # train model
+    clf = RandomForestClassifier(
+        n_estimators=n_estimators, max_depth=max_depth, random_state=random_state
+    )
+    clf.fit(X_train, y_train)
+
+    # predict on test data
+    y_pred = clf.predict(X_test)
+
+        # evaluate model
+    print("Accuracy: ", accuracy_score(y_test, y_pred))
+    # Generate the confusion matrix
+    cm = confusion_matrix(y_test, y_pred)
+
+    # Plot the confusion matrix
+    plt.figure(figsize=(10, 7))
+    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues")
+    plt.xlabel("Predicted")
+    plt.ylabel("Truth")
+    plt.show()
+
+    return clf
+
+def random_forest_regressor(X_train, X_test, y_train, y_test, n_estimators=1000, max_depth=50, random_state=257):
+    """Random Forest Regressor"""
+
+    # train model
+    clf = RandomForestRegressor(
+        n_estimators=n_estimators, max_depth=max_depth, random_state=random_state
+    )
+    clf.fit(X_train, y_train)
+
+    # predict on test data
+    y_pred = clf.predict(X_test)
+
+    return clf, y_pred
+
+
+def xgboost_regressor(X_train, X_test, y_train, y_test, random_state=257):
+    ''' XGBoost Regressor'''
+    from xgboost import XGBRegressor
+    # train model
+    clf = XGBRegressor(random_state=random_state)
+    clf.fit(X_train, y_train)
+
+    # predict on test data
+    y_pred = clf.predict(X_test)
+
+    return clf, y_pred
+
+def xgboost_classifier(X_train, X_test, y_train, y_test, random_state=257):
+    ''' XGBoost Classifier'''
+    from xgboost import XGBClassifier
+    # train model
+    clf = XGBClassifier(random_state=random_state)
+    clf.fit(X_train, y_train)
+
+    # predict on test data
+    y_pred = clf.predict(X_test)
+
+    # evaluate model
+    print("Accuracy: ", accuracy_score(y_test, y_pred))
+    # Generate the confusion matrix
+    cm = confusion_matrix(y_test, y_pred)
+
+    # Plot the confusion matrix
+    plt.figure(figsize=(10, 7))
+    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues")
+    plt.xlabel("Predicted")
+    plt.ylabel("Truth")
+    plt.show()
+
+    return clf
 
 

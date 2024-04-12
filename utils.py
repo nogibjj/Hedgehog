@@ -41,6 +41,36 @@ def drop_ticker(df, ticker):
     selected_columns = list(filter(lambda x: ticker not in x, df.columns))
     return df[selected_columns]
 
+def feature_type_map(df):
+    ''' Map feature names to their types'''
+    df = df.copy()
+    feature_map = {
+    "sentiment": ['SPY_ewm_log_ret_1d'],
+    "ohlc": ['SPY_ewm_log_ret_1d'],
+    "spy_ohlc": ['SPY_ewm_log_ret_1d'],
+    "returns": ['SPY_ewm_log_ret_1d'],
+    "spy_returns": ['SPY_ewm_log_ret_1d'],
+    "technical": ['SPY_ewm_log_ret_1d'],
+    }
+    for col in df.columns:
+        if 'sentiment' in col:
+            feature_map["sentiment"].append(col) if col not in feature_map["sentiment"] else None
+        elif 'HIGH' in col or 'LOW' in col or 'OPEN' in col:
+            feature_map["ohlc"].append(col) if col not in feature_map["ohlc"] else None
+            if 'SPY' in col:
+                feature_map["spy_ohlc"].append(col) if col not in feature_map["spy_ohlc"] else None
+        elif 'ret' in col:
+            if 'ewm' in col:
+                feature_map["technical"].append(col) if col not in feature_map["technical"] else None
+            else:
+                feature_map["returns"].append(col) if col not in feature_map["returns"] else None
+                if 'SPY' in col:
+                    feature_map["spy_returns"].append(col) if col not in feature_map["spy_returns"] else None
+        else:
+            feature_map["technical"].append(col) if col not in feature_map["technical"] else None
+    
+    return feature_map
+
 ############################################################################################################
 # technical indicators
 ############################################################################################################
@@ -150,8 +180,10 @@ def ml_prep(flattened_df, days=13, random_state=257):
     flattened_df = flattened_df.dropna()
     # define features
     y_true = flattened_df["y_true"].values
-    X = flattened_df.drop(columns=["DATE", "y_true"]).values
-    # X = X.reset_index(drop = True)
+    if "DATE" in flattened_df.columns:
+        X = flattened_df.drop(columns=["DATE", "y_true"]).values
+    else:
+        X = flattened_df.drop(columns=["y_true"]).values
     assert len(X) == len(y_true), "X and y_true must have the same length"
 
     # train test split
@@ -169,7 +201,10 @@ def prep_classifier_data(df, days = 13, random_state=257):
     df = df.dropna()
     # Define features
     y_true = df["y_true"].values
-    X = df.drop(columns=["DATE", "y_true"]).values
+    if "DATE" in df.columns:
+        X = df.drop(columns=["DATE", "y_true"]).values
+    else:
+        X = df.drop(columns=["y_true"]).values
     assert len(X) == len(y_true), "X and y_true must have the same length"
     # train test split
     X_train, X_test, y_train, y_test = train_test_split(

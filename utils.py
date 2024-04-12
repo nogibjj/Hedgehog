@@ -233,18 +233,12 @@ def logistic_regression(X_train, X_test, y_train, y_test, random_state=257):
     y_pred = clf.predict(X_test)
 
     # evaluate model
-    print("Accuracy: ", accuracy_score(y_test, y_pred))
+    print(f"Accuracy: {accuracy_score(y_test, y_pred) :.2f}" )
     # Generate the confusion matrix
     cm = confusion_matrix(y_test, y_pred)
 
-    # Plot the confusion matrix
-    plt.figure(figsize=(10, 7))
-    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues")
-    plt.xlabel("Predicted")
-    plt.ylabel("Truth")
-    plt.show()
+    return y_pred, cm, clf
 
-    return clf
 
 def random_forest_classifier(X_train, X_test, y_train, y_test, n_estimators=1000, max_depth=50, random_state=257):
     """Random Forest Classifier"""
@@ -259,18 +253,12 @@ def random_forest_classifier(X_train, X_test, y_train, y_test, n_estimators=1000
     y_pred = clf.predict(X_test)
 
         # evaluate model
-    print("Accuracy: ", accuracy_score(y_test, y_pred))
+    print(f"Accuracy: {accuracy_score(y_test, y_pred) :.2f}" )
     # Generate the confusion matrix
     cm = confusion_matrix(y_test, y_pred)
 
-    # Plot the confusion matrix
-    plt.figure(figsize=(10, 7))
-    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues")
-    plt.xlabel("Predicted")
-    plt.ylabel("Truth")
-    plt.show()
+    return y_pred, cm, clf
 
-    return clf
 
 def random_forest_regressor(X_train, X_test, y_train, y_test, n_estimators=1000, max_depth=50, random_state=257):
     """Random Forest Regressor"""
@@ -310,17 +298,51 @@ def xgboost_classifier(X_train, X_test, y_train, y_test, random_state=257):
     y_pred = clf.predict(X_test)
 
     # evaluate model
-    print("Accuracy: ", accuracy_score(y_test, y_pred))
+    print(f"Accuracy: {accuracy_score(y_test, y_pred) :.2f}" )
     # Generate the confusion matrix
     cm = confusion_matrix(y_test, y_pred)
 
+    return y_pred, cm, clf
+
+
+############################################################################################################
+# plots
+############################################################################################################
+
+def plot_confusion_matrix(y_test, y_pred, days, title):
+    ''' Plot confusion matrix'''
     # Plot the confusion matrix
+    cm = confusion_matrix(y_test, y_pred)
     plt.figure(figsize=(10, 7))
     sns.heatmap(cm, annot=True, fmt="d", cmap="Blues")
     plt.xlabel("Predicted")
     plt.ylabel("Truth")
+    plt.title(f"{title} for {days} day return")
     plt.show()
 
-    return clf
+def plot_feature_importance(clf, X_train, days):
+    ''' Plot feature importance'''
+    feature_importance = clf.feature_importances_
+    feature_names = X_train.columns
+    sorted_idx = feature_importance.argsort()
+    plt.figure(figsize=(10, 7))
+    plt.barh(feature_names[sorted_idx], feature_importance[sorted_idx])
+    plt.xlabel("Feature Importance")
+    plt.ylabel("Feature")
+    plt.title(f"Feature Importance for {days} day return")
+    plt.show()
 
-
+def plot_roc(clf, X_test, y_test, days, model_type):
+    ''' Plot ROC curve'''
+    from sklearn.metrics import roc_curve, roc_auc_score
+    y_pred = clf.predict_proba(X_test)[:, 1]
+    fpr, tpr, _ = roc_curve(y_test, y_pred)
+    auc = roc_auc_score(y_test, y_pred)
+    plt.figure(figsize=(10, 7))
+    plt.plot(fpr, tpr, label=f"AUC: {auc:.2f}")
+    plt.plot([0, 1], [0, 1], "--", color="gray")
+    plt.xlabel("False Positive Rate")
+    plt.ylabel("True Positive Rate")
+    plt.title("ROC Curve for {days} day return")
+    plt.legend()
+    plt.show()

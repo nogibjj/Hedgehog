@@ -193,7 +193,7 @@ def ml_prep(flattened_df, days=13, random_state=257):
 
     return X_train, X_test, y_train, y_test
 
-def prep_classifier_data(df, days = 13, random_state=257):
+def prep_classifier_data(df, days = 13, random_state=257, test_size = 0.2, sequential=False):
     ''' Prepare data for classifier'''
     # Create target variable
     df["y_true"] = df["SPY_ewm_log_ret_1d"].rolling(window = days).sum().shift(-days)
@@ -206,10 +206,17 @@ def prep_classifier_data(df, days = 13, random_state=257):
     else:
         X = df.drop(columns=["y_true"]).values
     assert len(X) == len(y_true), "X and y_true must have the same length"
+    
     # train test split
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y_true, test_size=0.2, random_state=random_state, shuffle=True
-    )
+    if sequential:
+        train_size = int(len(X) * (1 - test_size))
+        X_train, X_test = X[:train_size], X[train_size:]
+        y_train, y_test = y_true[:train_size], y_true[train_size:]
+
+    else:
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y_true, test_size=test_size, random_state=random_state, shuffle=True
+        )
 
     return X_train, X_test, y_train, y_test
 

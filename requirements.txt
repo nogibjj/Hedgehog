@@ -18,6 +18,11 @@ transformers
 torch==2.2.0
 tqdm==4.66.1
 numpy
+scikit-learn
+xgboost
 #collections
 dask
 dask[dataframe]
+# presentation
+matplotlib
+seaborn

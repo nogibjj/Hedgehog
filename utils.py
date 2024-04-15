@@ -171,7 +171,7 @@ def add_technical_indicators(df):
 ############################################################################################################
 from sklearn.model_selection import train_test_split
 
-def ml_prep(flattened_df, days=13, random_state=257):
+def ml_prep(flattened_df, days=13, random_state=257, test_size = 0.2, sequential=False):
     ''' Prepare data for regression'''
     assert days in [1, 5, 8, 13, 21], "days must be 1, 5, 8, 13, or 21"
     # flattened_df.dropna(inplace=True)
@@ -187,9 +187,14 @@ def ml_prep(flattened_df, days=13, random_state=257):
     assert len(X) == len(y_true), "X and y_true must have the same length"
 
     # train test split
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y_true, test_size=0.2, random_state=random_state, shuffle=True
-    )
+    if sequential:
+        train_size = int(len(X) * (1-test_size))
+        X_train, X_test = X[:train_size], X[train_size:]
+        y_train, y_test = y_true[:train_size], y_true[train_size:]
+    else:
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y_true, test_size=0.2, random_state=random_state, shuffle=True
+        )
 
     return X_train, X_test, y_train, y_test
 
@@ -212,6 +217,7 @@ def prep_classifier_data(df, days = 13, random_state=257, test_size = 0.2, seque
         train_size = int(len(X) * (1 - test_size))
         X_train, X_test = X[:train_size], X[train_size:]
         y_train, y_test = y_true[:train_size], y_true[train_size:]
+
 
     else:
         X_train, X_test, y_train, y_test = train_test_split(
@@ -294,11 +300,11 @@ def xgboost_regressor(X_train, X_test, y_train, y_test, random_state=257):
 
     return clf, y_pred
 
-def xgboost_classifier(X_train, X_test, y_train, y_test, random_state=257):
+def xgboost_classifier(X_train, X_test, y_train, y_test, n_estimators = None, max_depth = None, reg_alpha = None, random_state=257):
     ''' XGBoost Classifier'''
     from xgboost import XGBClassifier
     # train model
-    clf = XGBClassifier(random_state=random_state)
+    clf = XGBClassifier(random_state=random_state, n_estimators=n_estimators, max_depth=max_depth, reg_alpha=reg_alpha)
     clf.fit(X_train, y_train)
 
     # predict on test data
@@ -327,10 +333,13 @@ def plot_confusion_matrix(y_test, y_pred, days, title):
     plt.title(f"{title} for {days} day return")
     plt.show()
 
-def plot_feature_importance(clf, X_train, days):
+def plot_feature_importance(clf, X_train, days, col_names=None):
     ''' Plot feature importance'''
     feature_importance = clf.feature_importances_
-    feature_names = X_train.columns
+    if col_names:
+        feature_names = col_names
+    else:
+        feature_names = np.arange(X_train.shape[1])
     sorted_idx = feature_importance.argsort()
     plt.figure(figsize=(10, 7))
     plt.barh(feature_names[sorted_idx], feature_importance[sorted_idx])

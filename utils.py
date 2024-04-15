@@ -165,6 +165,23 @@ def add_technical_indicators(df):
 
     return df
 
+def add_sentiment_ti(df):
+    sentiment_cols = [col for col in df.columns if "sentiment" in col]
+    df = df.copy()
+    for col in sentiment_cols:
+        # change
+        for i in [1, 3, 5, 8, 13, 21]:
+            df.loc[:, f"{col}_change_{i}d"] = df[col] - df[col].shift(i)
+            # ewm
+            df.loc[:, f"{col}_ewm_{i}d"] = df[col].ewm(span=i).mean()
+        # macd
+        macd, macd_sig = calculate_macd(df[col])
+        df[f"{col}_macd"] = macd
+        df[f"{col}_macd_sig"] = macd_sig
+        # rsi
+        df[f"{col}_rsi"] = calculate_rsi(df[col], 14)
+    return df
+
 
 ############################################################################################################
 # x, y prep and train test split
@@ -198,7 +215,7 @@ def ml_prep(flattened_df, days=13, random_state=257, test_size = 0.2, sequential
 
     return X_train, X_test, y_train, y_test
 
-def prep_classifier_data(df, days = 13, random_state=257, test_size = 0.2, sequential=False):
+def prep_classifier_data(df, days = 13, random_state=257, test_size = 0.2, window = True, no_windows = 3, sequential=True):
     ''' Prepare data for classifier'''
     # Create target variable
     df["y_true"] = df["SPY_ewm_log_ret_1d"].rolling(window = days).sum().shift(-days)
@@ -214,9 +231,24 @@ def prep_classifier_data(df, days = 13, random_state=257, test_size = 0.2, seque
     
     # train test split
     if sequential:
+        # no rolling window
         train_size = int(len(X) * (1 - test_size))
         X_train, X_test = X[:train_size], X[train_size:]
         y_train, y_test = y_true[:train_size], y_true[train_size:]
+
+        # rolling window
+        # X_train, X_test = [], []
+        # y_train, y_test = [], []
+
+        # window_size = (len(X) - 21*no_windows) // no_windows
+        # train_size = int(window_size * (1 - test_size))
+        # for i in range(no_windows):
+        #     X_train.append(X[i*window_size: i*window_size + train_size])
+        #     X_test.append(X[i*window_size + 21*i + train_size: i*window_size + 21*i + window_size])
+        #     y_train.append(y_true[i*window_size: i*window_size + train_size])
+        #     y_test.append(y_true[i*window_size + 21*i + train_size: i*window_size + 21*i + window_size])
+
+
 
 
     else:
@@ -305,6 +337,23 @@ def xgboost_classifier(X_train, X_test, y_train, y_test, n_estimators = None, ma
     from xgboost import XGBClassifier
     # train model
     clf = XGBClassifier(random_state=random_state, n_estimators=n_estimators, max_depth=max_depth, reg_alpha=reg_alpha)
+    clf.fit(X_train, y_train)
+
+    # predict on test data
+    y_pred = clf.predict(X_test)
+
+    # evaluate model
+    print(f"Accuracy: {accuracy_score(y_test, y_pred) :.2f}" )
+    # Generate the confusion matrix
+    cm = confusion_matrix(y_test, y_pred)
+
+    return y_pred, cm, clf
+
+def mlp_classifier(X_train, X_test, y_train, y_test, hidden_layer_sizes = (720, 720), random_state=257):
+    ''' MLP Classifier'''
+    from sklearn.neural_network import MLPClassifier
+    # train model
+    clf = MLPClassifier(hidden_layer_sizes=hidden_layer_sizes, random_state=random_state)
     clf.fit(X_train, y_train)
 
     # predict on test data
